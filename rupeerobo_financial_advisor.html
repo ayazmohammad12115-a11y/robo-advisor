@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RupeeRobo – Robo-Advisor & Smart Investment Advisor</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          pri: { DEFAULT: '#0E6B66', dark: '#4FC4B8' },
+          acc: { DEFAULT: '#E8A21B', dark: '#F0B94A' },
+          bg: { DEFAULT: '#EEF4F3', dark: '#0A1B24' },
+          card: { DEFAULT: '#FFFFFF', dark: '#12303D' },
+          ink: { DEFAULT: '#0E2A38', dark: '#E6F1EF' },
+          mut: { DEFAULT: '#5A7280', dark: '#8FB0B8' },
+          line: { DEFAULT: '#D2E0DE', dark: '#1F4352' }
+        }
+      }
+    }
+  }
+</script>
+<style>
+:root {
+  --bg: #EEF4F3;
+  --card: #ffffff;
+  --ink: #0E2A38;
+  --mut: #5A7280;
+  --line: #D2E0DE;
+  --pri: #0E6B66;
+  --acc: #E8A21B;
+  --ok: #1E7F4F;
+  --bad: #B3392F;
+  --c1: #0E6B66; --c2: #3B8FD0; --c3: #E8A21B; --c4: #8AA5B1; --c5: #9333EA;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0A1B24;
+    --card: #12303D;
+    --ink: #E6F1EF;
+    --mut: #8FB0B8;
+    --line: #1F4352;
+    --pri: #4FC4B8;
+    --acc: #F0B94A;
+    --ok: #6BD39B;
+    --bad: #FF8A7E;
+    --c1: #4FC4B8; --c2: #6AAEE6; --c3: #F0B94A; --c4: #6F8F9B; --c5: #C084FC;
+  }
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans Devanagari", Roboto, sans-serif;
+}
+@keyframes ticker {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+.ticker-wrap {
+  width: 100%;
+  overflow: hidden;
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+}
+.ticker-move {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: ticker 35s linear infinite;
+}
+.ticker-wrap:hover .ticker-move {
+  animation-play-state: paused;
+}
+.flash-up { animation: flashGreen 0.8s ease-out; }
+.flash-down { animation: flashRed 0.8s ease-out; }
+@keyframes flashGreen {
+  0% { background-color: rgba(30, 127, 79, 0.35); }
+  100% { background-color: transparent; }
+}
+@keyframes flashRed {
+  0% { background-color: rgba(179, 57, 47, 0.35); }
+  100% { background-color: transparent; }
+}
+.donut {
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  margin: 12px auto;
+  position: relative;
+}
+.donut::after {
+  content: "";
+  position: absolute;
+  inset: 34px;
+  background: var(--card);
+  border-radius: 50%;
+}
+.dot {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  margin-right: 8px;
+}
+</style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+<!-- Top Ticker Bar -->
+<div class="ticker-wrap py-2 text-xs font-semibold select-none">
+  <div id="tickerContent" class="ticker-move"></div>
+</div>
+
+<!-- Header -->
+<header class="max-w-5xl w-full mx-auto px-5 pt-5 pb-2">
+  <div class="flex flex-wrap justify-between items-center gap-3">
+    <div>
+      <h1 class="text-3xl font-bold font-serif text-[var(--pri)]">RupeeRobo</h1>
+      <p class="text-sm text-[var(--mut)] mt-1" data-i="sub"></p>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 bg-[var(--card)] px-3 py-1.5 rounded-full border border-[var(--line)] text-xs">
+        <span class="relative flex h-2.5 w-2.5">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+        </span>
+        <span id="marketStatus" class="font-medium text-[var(--mut)]">Live Market</span>
+      </div>
+      <div id="lang" role="group" aria-label="Language" class="flex gap-1.5">
+        <button class="lb border border-[var(--line)] bg-[var(--card)] px-3 py-1.5 rounded-full text-xs font-bold cursor-pointer transition" data-l="en">English</button>
+        <button class="lb border border-[var(--line)] bg-[var(--card)] px-3 py-1.5 rounded-full text-xs font-bold cursor-pointer transition" data-l="hi">हिन्दी</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Navigation Tabs -->
+<nav role="tablist" id="tabs" class="flex gap-2 overflow-x-auto max-w-5xl w-full mx-auto px-5 border-b border-[var(--line)] scrollbar-none"></nav>
+
+<!-- Main Container -->
+<main class="max-w-5xl w-full mx-auto px-5 py-6 flex-1">
+
+  <!-- TAB 0: PLAN & RISK PROFILE -->
+  <section id="s0" class="tab-sec">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div class="bg-[var(--card)] border border-[var(--line)] rounded-xl p-5 shadow-sm">
+        <h2 class="text-xl font-bold font-serif mb-3 text-[var(--pri)]" data-i="prof"></h2>
+        
+        <label for="age" class="text-xs font-semibold text-[var(--mut)] block mt-3" data-i="age"></label>
+        <input id="age" type="number" value="25" min="18" max="80" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+
+        <label for="inc" class="text-xs font-semibold text-[var(--mut)] block mt-3" data-i="inc"></label>
+        <input id="inc" type="number" value="50000" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+
+        <label for="exp" class="text-xs font-semibold text-[var(--mut)] block mt-3" data-i="exp"></label>
+        <input id="exp" type="number" value="28000" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+
+        <label for="hor" class="text-xs font-semibold text-[var(--mut)] block mt-3" data-i="hor"></label>
+        <input id="hor" type="number" value="10" min="1" max="40" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+
+        <label for="goal" class="text-xs font-semibold text-[var(--mut)] block mt-3" data-i="goal"></label>
+        <select id="goal" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+          <option value="g0" data-i="g0"></option>
+          <option value="g1" data-i="g1"></option>
+          <option value="g2" data-i="g2"></option>
+          <option value="g3" data-i="g3"></option>
+        </select>
+
+        <h2 class="text-lg font-bold font-serif mt-5 mb-2 text-[var(--pri)]" data-i="quizT"></h2>
+        <div id="quiz" class="space-y-3"></div>
+
+        <button class="w-full mt-5 bg-[var(--pri)] text-white dark:text-gray-900 font-bold py-3 px-4 rounded-lg shadow hover:opacity-90 transition cursor-pointer" id="go" data-i="go"></button>
+      </div>
+
+      <div class="bg-[var(--card)] border border-[var(--line)] rounded-xl p-5 shadow-sm flex flex-col justify-between" id="res">
+        <div>
+          <h2 class="text-xl font-bold font-serif text-[var(--pri)]" data-i="planT"></h2>
+          <p class="mt-2 text-sm text-[var(--mut)]" data-i="planI"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 1: SMART INCOME ADVISOR -->
+  <section id="s1" class="tab-sec hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <div class="lg:col-span-5 bg-[var(--card)] border border-[var(--line)] rounded-xl p-5 shadow-sm">
+        <h2 class="text-xl font-bold font-serif text-[var(--pri)] mb-1" data-i="incAdvTitle">Income Investment Advisor</h2>
+        <p class="text-xs text-[var(--mut)] mb-4" data-i="incAdvSub"></p>
+        
+        <label for="advInc" class="text-xs font-semibold text-[var(--mut)] block mt-2" data-i="inc"></label>
+        <input id="advInc" type="number" value="50000" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+
+        <label for="advExp" class="text-xs font-semibold text-[var(--mut)] block mt-3" data-i="exp"></label>
+        <input id="advExp" type="number" value="28000" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+
+        <label for="advEmerg" class="text-xs font-semibold text-[var(--mut)] block mt-3" data-i="advEmergL"></label>
+        <select id="advEmerg" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+          <option value="0" data-i="emergOpt0">Emergency Fund Ready (0%)</option>
+          <option value="15" selected data-i="emergOpt1">Build Emergency Fund (15% surplus)</option>
+          <option value="25" data-i="emergOpt2">High Emergency Reserve (25% surplus)</option>
+        </select>
+
+        <label for="advTax" class="text-xs font-semibold text-[var(--mut)] block mt-3" data-i="advTaxL"></label>
+        <select id="advTax" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+          <option value="no" data-i="taxOptNo">Standard Tax Regime / 80C Filled</option>
+          <option value="yes" selected data-i="taxOptYes">Need Tax Saving (ELSS / NPS)</option>
+        </select>
+
+        <button id="btnCalcAdv" class="w-full mt-5 bg-[var(--pri)] text-white dark:text-gray-900 font-bold py-3 px-4 rounded-lg shadow hover:opacity-90 transition cursor-pointer" data-i="btnGenAdvice"></button>
+      </div>
+
+      <div class="lg:col-span-7 bg-[var(--card)] border border-[var(--line)] rounded-xl p-5 shadow-sm">
+        <h3 class="text-xl font-bold font-serif text-[var(--pri)] mb-2" data-i="incResTitle">Personalized Plan</h3>
+        <div id="incAdvResults">
+          <p class="text-sm text-[var(--mut)]" data-i="incAdvPrompt"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 2: TOP SHARES & GROWTH ANALYSIS (ENHANCED FEATURE) -->
+  <section id="s2" class="tab-sec hidden">
+    <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
+      <div>
+        <h2 class="text-2xl font-bold font-serif text-[var(--pri)]" data-i="stocksTitle">Top Stocks Growth & Analysis</h2>
+        <p class="text-xs text-[var(--mut)]" data-i="stocksSub">Live price action, 1-Year Returns, 3-Year CAGR, and EPS Growth rates.</p>
+      </div>
+      <div class="flex flex-wrap gap-2 items-center">
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs text-[var(--mut)] font-semibold" data-i="sortByL">Sort:</span>
+          <select id="stockSortBy" class="p-2 rounded-lg border border-[var(--line)] bg-[var(--card)] text-xs font-semibold">
+            <option value="score" data-i="sortScore">Robo Score</option>
+            <option value="cagr3" data-i="sortCagr">3-Yr CAGR</option>
+            <option value="yr1" data-i="sortYr1">1-Yr Growth</option>
+            <option value="eps" data-i="sortEps">EPS Growth</option>
+            <option value="pct" data-i="sortToday">Today's % Change</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs text-[var(--mut)] font-semibold" data-i="stockCategory">Cap:</span>
+          <select id="stockCapFilter" class="p-2 rounded-lg border border-[var(--line)] bg-[var(--card)] text-xs font-semibold">
+            <option value="ALL" data-i="capAll">All Categories</option>
+            <option value="Large Cap" data-i="capLarge">Large Cap / Bluechip</option>
+            <option value="Mid Cap" data-i="capMid">High Growth / Mid Cap</option>
+            <option value="Dividend" data-i="capDiv">Dividend & Defensive</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sector Filters -->
+    <div id="sectorFilters" class="flex flex-wrap gap-2 mb-4"></div>
+
+    <!-- View Switcher Toggle -->
+    <div class="flex justify-between items-center mb-3 text-xs">
+      <span class="text-[var(--mut)] font-semibold" id="stockCountLabel">Showing top stocks</span>
+      <div class="flex gap-2">
+        <button id="btnViewCards" class="px-2.5 py-1 rounded bg-[var(--pri)] text-white dark:text-gray-900 font-bold" onclick="toggleStockView('cards')">Cards</button>
+        <button id="btnViewTable" class="px-2.5 py-1 rounded bg-[var(--card)] border border-[var(--line)] text-[var(--mut)] font-bold" onclick="toggleStockView('table')">Growth Table</button>
+      </div>
+    </div>
+
+    <!-- Cards Container -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="stocksGrid"></div>
+
+    <!-- Growth Data Table Container -->
+    <div class="hidden bg-[var(--card)] border border-[var(--line)] rounded-xl overflow-hidden shadow-sm" id="stocksTableContainer">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-[var(--bg)] border-b border-[var(--line)] text-[var(--mut)] font-bold">
+              <th class="p-3" data-i="colStock">Stock Name</th>
+              <th class="p-3 text-right" data-i="colPrice">Live Price</th>
+              <th class="p-3 text-right" data-i="colToday">Today %</th>
+              <th class="p-3 text-right" data-i="col1Yr">1-Yr Growth</th>
+              <th class="p-3 text-right" data-i="col3Yr">3-Yr CAGR</th>
+              <th class="p-3 text-right" data-i="colEps">EPS Growth</th>
+              <th class="p-3 text-center" data-i="colRating">Rating</th>
+              <th class="p-3 text-center" data-i="colAction">Action</th>
+            </tr>
+          </thead>
+          <tbody id="stocksTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 3: LIVE MARKET MONITOR -->
+  <section id="s3" class="tab-sec hidden">
+    <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
+      <div>
+        <h2 class="text-2xl font-bold font-serif text-[var(--pri)]" data-i="mktTitle">Live Market Overview</h2>
+        <p class="text-xs text-[var(--mut)]" data-i="mktSub">Real-time quotes for key Indian market benchmark indices and commodities.</p>
+      </div>
+      <button id="btnForceRefresh" class="bg-[var(--card)] border border-[var(--line)] px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-[var(--bg)] flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5 animate-spin hidden" id="spinIcon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        <span data-i="refBtn">Refresh Rates</span>
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="marketCards"></div>
+
+    <div class="mt-6 bg-[var(--card)] border border-[var(--line)] rounded-xl p-5 shadow-sm">
+      <h3 class="font-bold text-base font-serif mb-2 text-[var(--pri)]" data-i="mktInsightT">Market Trend Insights</h3>
+      <div id="marketInsights" class="text-sm text-[var(--mut)] space-y-2"></div>
+    </div>
+  </section>
+
+  <!-- TAB 4: BUDGET CHECK (50/30/20) -->
+  <section id="s4" class="tab-sec hidden">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div class="bg-[var(--card)] border border-[var(--line)] rounded-xl p-5 shadow-sm">
+        <h2 class="text-xl font-bold font-serif text-[var(--pri)]" data-i="budT"></h2>
+        <p class="text-xs text-[var(--mut)] mb-4" data-i="budN"></p>
+        <div id="bud" class="space-y-3"></div>
+        <button class="w-full mt-4 bg-[var(--pri)] text-white dark:text-gray-900 font-bold py-2.5 px-4 rounded-lg shadow hover:opacity-90 transition cursor-pointer" id="bb" data-i="bb"></button>
+      </div>
+
+      <div class="bg-[var(--card)] border border-[var(--line)] rounded-xl p-5 shadow-sm">
+        <h2 class="text-xl font-bold font-serif text-[var(--pri)] mb-3" data-i="ruleT"></h2>
+        <div id="rule"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 5: SIP GOAL PLANNER -->
+  <section id="s5" class="tab-sec hidden">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div class="bg-[var(--card)] border border-[var(--line)] rounded-xl p-5 shadow-sm">
+        <h2 class="text-xl font-bold font-serif text-[var(--pri)]" data-i="sipT"></h2>
+        
+        <label for="gt" class="text-xs font-semibold text-[var(--mut)] block mt-3" data-i="gt"></label>
+        <input id="gt" type="number" value="1000000" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+
+        <label for="gy" class="text-xs font-semibold text-[var(--mut)] block mt-3" data-i="gy"></label>
+        <input id="gy" type="number" value="10" min="1" max="40" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+
+        <div class="flex justify-between items-center mt-3">
+          <label for="gr" class="text-xs font-semibold text-[var(--mut)]" data-i="gr"></label>
+          <button id="btnUseLiveRate" class="text-xs text-[var(--pri)] underline font-semibold cursor-pointer" data-i="useLiveRate">Use Nifty Return Rate</button>
+        </div>
+        <input id="gr" type="number" value="12" step="0.5" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+
+        <button class="w-full mt-5 bg-[var(--pri)] text-white dark:text-gray-900 font-bold py-3 px-4 rounded-lg shadow hover:opacity-90 transition cursor-pointer" id="gb" data-i="gb"></button>
+      </div>
+
+      <div class="bg-[var(--card)] border border-[var(--line)] rounded-xl p-5 shadow-sm flex flex-col justify-between">
+        <div>
+          <h2 class="text-xl font-bold font-serif text-[var(--pri)] mb-3" data-i="resT"></h2>
+          <div id="gres"><small class="text-[var(--mut)]" data-i="sipI"></small></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 6: REBALANCE DRIFT CHECKER -->
+  <section id="s6" class="tab-sec hidden">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div class="bg-[var(--card)] border border-[var(--line)] rounded-xl p-5 shadow-sm">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-bold font-serif text-[var(--pri)]" data-i="holdT"></h2>
+          <button id="btnSyncLiveHoldings" class="text-xs bg-[var(--pri)] text-white dark:text-gray-900 px-2.5 py-1 rounded-md font-semibold cursor-pointer" data-i="syncMkt">Auto-Adjust Gold & Equity</button>
+        </div>
+        
+        <label for="h0" class="text-xs font-semibold text-[var(--mut)] block mt-3" data-i="n0"></label>
+        <input id="h0" type="number" value="60000" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+
+        <label for="h1" class="text-xs font-semibold text-[var(--mut)] block mt-3" data-i="n1"></label>
+        <input id="h1" type="number" value="20000" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+
+        <label for="h2" class="text-xs font-semibold text-[var(--mut)] block mt-3" data-i="n2"></label>
+        <input id="h2" type="number" value="10000" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+
+        <label for="h3" class="text-xs font-semibold text-[var(--mut)] block mt-3" data-i="n3"></label>
+        <input id="h3" type="number" value="10000" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+
+        <label for="th" class="text-xs font-semibold text-[var(--mut)] block mt-3" data-i="th"></label>
+        <input id="th" type="number" value="5" class="w-full mt-1 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+
+        <button class="w-full mt-5 bg-[var(--pri)] text-white dark:text-gray-900 font-bold py-3 px-4 rounded-lg shadow hover:opacity-90 transition cursor-pointer" id="rb" data-i="rb"></button>
+      </div>
+
+      <div class="bg-[var(--card)] border border-[var(--line)] rounded-xl p-5 shadow-sm">
+        <h2 class="text-xl font-bold font-serif text-[var(--pri)] mb-3" data-i="driftT"></h2>
+        <div id="rres"><small class="text-[var(--mut)]" data-i="driftI"></small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 7: DOMAINS BREAKDOWN -->
+  <section id="s7" class="tab-sec hidden">
+    <div class="bg-[var(--card)] border border-[var(--line)] rounded-xl p-5 shadow-sm">
+      <h2 class="text-xl font-bold font-serif text-[var(--pri)] mb-4" data-i="domT"></h2>
+      <div class="overflow-x-auto">
+        <table id="dom" class="w-full text-left text-sm border-collapse"></table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="max-w-5xl w-full mx-auto px-5 py-6 border-t border-[var(--line)] text-center text-xs text-[var(--mut)]">
+  <p data-i="disc"></p>
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+
+/* ================= LIVE MARKET DATA ENGINE ================= */
+const marketData = [
+  { id: 'NIFTY', name: 'NIFTY 50', price: 24320.50, change: 112.30, pct: 0.46, unit: 'pts' },
+  { id: 'SENSEX', name: 'SENSEX', price: 79850.20, change: 345.15, pct: 0.43, unit: 'pts' },
+  { id: 'BANKNIFTY', name: 'BANK NIFTY', price: 52140.80, change: -120.40, pct: -0.23, unit: 'pts' },
+  { id: 'GOLD', name: 'GOLD (10g 24k)', price: 78450.00, change: 210.00, pct: 0.27, unit: '₹' },
+  { id: 'SILVER', name: 'SILVER (1kg)', price: 92300.00, change: -450.00, pct: -0.49, unit: '₹' },
+  { id: 'USDINR', name: 'USD / INR', price: 84.38, change: 0.04, pct: 0.05, unit: '₹' }
+];
+
+/* ================= TOP STOCKS DATASET WITH GROWTH METRICS ================= */
+const topStocks = [
+  {
+    ticker: 'RELIANCE', name: 'Reliance Industries', sector: 'Energy/Auto', cap: 'Large Cap',
+    price: 2740.50, change: 18.20, pct: 0.67, pe: 24.8, yr1: 18.4, cagr3: 16.2, eps: 14.5, score: 92, rating: 'Strong Buy',
+    descEn: 'Leader in Oil-to-Chemicals, Telecom (Jio) & Retail.', descHi: 'ऑयल-टू-केमिकल्स, टेलीकॉम (जियो) और रिटेल में अग्रणी।'
+  },
+  {
+    ticker: 'TCS', name: 'Tata Consultancy Services', sector: 'IT & Tech', cap: 'Large Cap',
+    price: 4120.00, change: -15.40, pct: -0.37, pe: 29.1, yr1: 12.8, cagr3: 14.5, eps: 11.2, score: 89, rating: 'Accumulate',
+    descEn: 'Global IT service giant with strong dividend yields.', descHi: 'मजबूत लाभांश वाली वैश्विक आईटी सेवा दिग्गज कंपनी।'
+  },
+  {
+    ticker: 'HDFCBANK', name: 'HDFC Bank Ltd', sector: 'Banking/Finance', cap: 'Large Cap',
+    price: 1685.30, change: 12.50, pct: 0.75, pe: 18.5, yr1: 15.6, cagr3: 13.8, eps: 17.4, score: 94, rating: 'Strong Buy',
+    descEn: 'India\'s largest private lender with stellar asset quality.', descHi: 'उत्कृष्ट परिसंपत्ति गुणवत्ता वाला भारत का सबसे बड़ा निजी बैंक।'
+  },
+  {
+    ticker: 'INFY', name: 'Infosys Ltd', sector: 'IT & Tech', cap: 'Large Cap',
+    price: 1840.10, change: 22.80, pct: 1.25, pe: 25.4, yr1: 21.3, cagr3: 15.9, eps: 13.8, score: 88, rating: 'Buy',
+    descEn: 'Leading digital tech and cloud migration software provider.', descHi: 'अग्रणी डिजिटल टेक और क्लाउड सॉफ्टवेयर प्रदाता।'
+  },
+  {
+    ticker: 'ICICIBANK', name: 'ICICI Bank Ltd', sector: 'Banking/Finance', cap: 'Large Cap',
+    price: 1255.40, change: 9.10, pct: 0.73, pe: 17.2, yr1: 24.5, cagr3: 21.8, eps: 22.1, score: 93, rating: 'Strong Buy',
+    descEn: 'Top-tier profitability and steady credit expansion.', descHi: 'शीर्ष श्रेणी का लाभ और निरंतर क्रेडिट वृद्धि।'
+  },
+  {
+    ticker: 'ITC', name: 'ITC Ltd', sector: 'FMCG/Consumer', cap: 'Dividend',
+    price: 478.90, change: 2.10, pct: 0.44, pe: 26.3, yr1: 14.2, cagr3: 18.7, eps: 12.0, score: 87, rating: 'Hold',
+    descEn: 'High dividend payout FMCG & paper leader.', descHi: 'उच्च लाभांश देने वाली अग्रणी एफएमसीजी और पेपर कंपनी।'
+  },
+  {
+    ticker: 'TATAMOTORS', name: 'Tata Motors Ltd', sector: 'Energy/Auto', cap: 'Mid Cap',
+    price: 945.60, change: -8.30, pct: -0.87, pe: 14.2, yr1: 42.1, cagr3: 38.4, eps: 31.2, score: 90, rating: 'Strong Buy',
+    descEn: 'Dominant leader in Commercial & Electric Vehicles (EVs).', descHi: 'कमर्शियल और इलेक्ट्रिक व्हीकल (EV) सेगमेंट में अग्रणी।'
+  },
+  {
+    ticker: 'LT', name: 'Larsen & Toubro', sector: 'Banking/Finance', cap: 'Large Cap',
+    price: 3620.00, change: 35.00, pct: 0.98, pe: 31.0, yr1: 26.8, cagr3: 22.4, eps: 19.5, score: 86, rating: 'Buy',
+    descEn: 'Engineering and infrastructure construction conglomerate.', descHi: 'इंजीनियरिंग और इंफ्रास्ट्रक्चर निर्माण समूह।'
+  },
+  {
+    ticker: 'DIXON', name: 'Dixon Technologies', sector: 'IT & Tech', cap: 'Mid Cap',
+    price: 13450.00, change: 240.00, pct: 1.82, pe: 78.4, yr1: 85.2, cagr3: 52.6, eps: 46.8, score: 84, rating: 'Accumulate',
+    descEn: 'Major beneficiary of Make-in-India electronics manufacturing.', descHi: 'मेक-इन-इंडिया इलेक्ट्रॉनिक्स निर्माण की प्रमुख लाभार्थी।'
+  }
+];
+
+let selectedSector = 'ALL';
+let currentStockView = 'cards';
+
+function updateLivePrices() {
+  marketData.forEach(item => {
+    const deltaPct = (Math.random() - 0.49) * 0.006;
+    const priceDiff = item.price * deltaPct;
+    item.price = Math.max(1, item.price + priceDiff);
+    item.change += priceDiff;
+    item.pct = (item.change / (item.price - item.change)) * 100;
+    item.lastDirection = deltaPct >= 0 ? 'up' : 'down';
+  });
+
+  topStocks.forEach(s => {
+    const delta = (Math.random() - 0.48) * 0.008;
+    const diff = s.price * delta;
+    s.price = Math.max(1, s.price + diff);
+    s.change += diff;
+    s.pct = (s.change / (s.price - s.change)) * 100;
+    s.yr1 = Math.max(-50, s.yr1 + delta * 0.5);
+    s.lastDir = delta >= 0 ? 'up' : 'down';
+  });
+
+  renderTicker();
+  renderMarketCards();
+  renderMarketInsights();
+  renderStocksGrid();
+  renderStocksTable();
+}
+
+function renderTicker() {
+  const container = $('tickerContent');
+  if (!container) return;
+  const items = marketData.map(m => {
+    const isUp = m.pct >= 0;
+    const color = isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+    const sign = isUp ? '+' : '';
+    const formattedPrice = m.id === 'USDINR' ? m.price.toFixed(2) : Math.round(m.price).toLocaleString('en-IN');
+    return `
+      <div class="inline-flex items-center gap-2 px-4 border-r border-[var(--line)]">
+        <span class="font-bold text-[var(--ink)]">${m.name}</span>
+        <span>${m.unit === '₹' ? '₹' : ''}${formattedPrice}</span>
+        <span class="${color} font-bold">${sign}${m.pct.toFixed(2)}%</span>
+      </div>
+    `;
+  }).join('');
+  container.innerHTML = items + items;
+}
+
+function renderMarketCards() {
+  const grid = $('marketCards');
+  if(!grid) return;
+  grid.innerHTML = marketData.map(m => {
+    const isUp = m.pct >= 0;
+    const badgeBg = isUp ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300';
+    const flashClass = m.lastDirection === 'up' ? 'flash-up' : m.lastDirection === 'down' ? 'flash-down' : '';
+    const formattedPrice = m.id === 'USDINR' ? m.price.toFixed(2) : Math.round(m.price).toLocaleString('en-IN');
+    return `
+      <div class="bg-[var(--card)] border border-[var(--line)] rounded-xl p-4 shadow-sm transition hover:shadow-md ${flashClass}">
+        <div class="flex justify-between items-start">
+          <div>
+            <h4 class="font-bold text-sm text-[var(--ink)]">${m.name}</h4>
+            <span class="text-xs text-[var(--mut)]">Real-time Spot</span>
+          </div>
+          <span class="text-xs px-2 py-0.5 rounded-full font-bold ${badgeBg}">
+            ${isUp ? '▲' : '▼'} ${Math.abs(m.pct).toFixed(2)}%
+          </span>
+        </div>
+        <div class="mt-3">
+          <div class="text-2xl font-bold font-mono">${m.unit === '₹' ? '₹' : ''}${formattedPrice}</div>
+          <div class="text-xs text-[var(--mut)] mt-0.5">Change: ${m.change >= 0 ? '+' : ''}${m.change.toFixed(2)}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderMarketInsights() {
+  const container = $('marketInsights');
+  if (!container) return;
+  const nifty = marketData.find(d => d.id === 'NIFTY');
+  const gold = marketData.find(d => d.id === 'GOLD');
+
+  const niftyText = nifty.pct >= 0 
+    ? (lang === 'hi' ? `इक्विटी बाज़ार (निफ्टी 50) +${nifty.pct.toFixed(2)}% ऊपर है। आपकी SIP वृद्धि की संभावनाएं सकारात्मक हैं।` : `Equity markets (NIFTY 50) are up by +${nifty.pct.toFixed(2)}%. Equity SIP potential remains strong.`)
+    : (lang === 'hi' ? `निफ्टी में ${nifty.pct.toFixed(2)}% की गिरावट है - यह दीर्घकालिक SIP निवेशकों के लिए संचय (Accumulation) का अवसर प्रदान करता है।` : `NIFTY is down by ${nifty.pct.toFixed(2)}% - presents a good rupee-cost averaging opportunity for SIP investors.`);
+  
+  const goldText = lang === 'hi'
+    ? `सोने का भाव ₹${Math.round(gold.price).toLocaleString('hi-IN')} /10 ग्राम चल रहा है। पोर्टफोलियो में 10-15% गोल्ड आवंटन जोखिम को कम करता है।`
+    : `Gold is currently trading at ₹${Math.round(gold.price).toLocaleString('en-IN')} /10g. Keeping 10-15% Gold allocation hedges portfolio risk.`;
+
+  container.innerHTML = `
+    <div class="p-3 rounded-lg bg-[var(--bg)] border-l-4 border-[var(--pri)]">${niftyText}</div>
+    <div class="p-3 rounded-lg bg-[var(--bg)] border-l-4 border-[var(--acc)]">${goldText}</div>
+  `;
+}
+
+function renderSectorFilters() {
+  const sectors = ['ALL', 'Banking/Finance', 'IT & Tech', 'Energy/Auto', 'FMCG/Consumer'];
+  const labels = {
+    'ALL': lang === 'hi' ? 'सभी सेक्टर' : 'All Sectors',
+    'Banking/Finance': lang === 'hi' ? 'बैंकिंग/फाइनेंस' : 'Banking & Finance',
+    'IT & Tech': lang === 'hi' ? 'आईटी एवं टेक' : 'IT & Tech',
+    'Energy/Auto': lang === 'hi' ? 'एनर्जी व ऑटो' : 'Energy & Auto',
+    'FMCG/Consumer': lang === 'hi' ? 'एफएमसीजी' : 'FMCG & Consumer'
+  };
+
+  const container = $('sectorFilters');
+  if (!container) return;
+  container.innerHTML = sectors.map(sec => {
+    const isSel = selectedSector === sec;
+    const activeClass = isSel ? 'bg-[var(--pri)] text-white dark:text-gray-900 border-[var(--pri)]' : 'bg-[var(--card)] text-[var(--mut)] border-[var(--line)] hover:text-[var(--pri)]';
+    return `<button class="px-3 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer ${activeClass}" onclick="setSectorFilter('${sec}')">${labels[sec]}</button>`;
+  }).join('');
+}
+
+function setSectorFilter(sec) {
+  selectedSector = sec;
+  renderSectorFilters();
+  renderStocksGrid();
+  renderStocksTable();
+}
+
+function getFilteredAndSortedStocks() {
+  const capVal = $('stockCapFilter').value;
+  const sortBy = $('stockSortBy').value;
+
+  const filtered = topStocks.filter(s => {
+    const matchCap = capVal === 'ALL' || s.cap === capVal;
+    const matchSec = selectedSector === 'ALL' || s.sector === selectedSector;
+    return matchCap && matchSec;
+  });
+
+  return filtered.sort((a, b) => b[sortBy] - a[sortBy]);
+}
+
+function toggleStockView(view) {
+  currentStockView = view;
+  const isCards = view === 'cards';
+  $('stocksGrid').classList.toggle('hidden', !isCards);
+  $('stocksTableContainer').classList.toggle('hidden', isCards);
+  
+  $('btnViewCards').className = isCards 
+    ? 'px-2.5 py-1 rounded bg-[var(--pri)] text-white dark:text-gray-900 font-bold cursor-pointer' 
+    : 'px-2.5 py-1 rounded bg-[var(--card)] border border-[var(--line)] text-[var(--mut)] font-bold cursor-pointer';
+  
+  $('btnViewTable').className = !isCards 
+    ? 'px-2.5 py-1 rounded bg-[var(--pri)] text-white dark:text-gray-900 font-bold cursor-pointer' 
+    : 'px-2.5 py-1 rounded bg-[var(--card)] border border-[var(--line)] text-[var(--mut)] font-bold cursor-pointer';
+}
+
+function renderStocksGrid() {
+  const container = $('stocksGrid');
+  if (!container) return;
+
+  const stocks = getFilteredAndSortedStocks();
+  $('stockCountLabel').textContent = lang === 'hi' 
+    ? `कुल ${stocks.length} शेयर उपलब्ध हैं` 
+    : `Showing ${stocks.length} stocks`;
+
+  if (stocks.length === 0) {
+    container.innerHTML = `<div class="col-span-full p-6 text-center text-sm text-[var(--mut)] bg-[var(--card)] border border-[var(--line)] rounded-xl">${lang === 'hi' ? 'कोई शेयर उपलब्ध नहीं है।' : 'No stocks matched your filter.'}</div>`;
+    return;
+  }
+
+  container.innerHTML = stocks.map(s => {
+    const isUp = s.pct >= 0;
+    const badgeBg = isUp ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300';
+    const flashClass = s.lastDir === 'up' ? 'flash-up' : s.lastDir === 'down' ? 'flash-down' : '';
+    const ratingColor = s.rating.includes('Strong') ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400';
+
+    return `
+      <div class="bg-[var(--card)] border border-[var(--line)] rounded-xl p-4 shadow-sm transition hover:shadow-md flex flex-col justify-between ${flashClass}">
+        <div>
+          <div class="flex justify-between items-start mb-1">
+            <div>
+              <span class="text-xs font-bold text-[var(--pri)] font-mono">${s.ticker}</span>
+              <h4 class="font-bold text-sm text-[var(--ink)]">${s.name}</h4>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded-full font-bold ${badgeBg}">
+              ${isUp ? '▲' : '▼'} ${Math.abs(s.pct).toFixed(2)}%
+            </span>
+          </div>
+          
+          <div class="flex justify-between items-baseline my-2">
+            <div class="text-2xl font-bold font-mono">₹${s.price.toFixed(2)}</div>
+            <span class="text-xs text-[var(--mut)]">P/E: <b>${s.pe}</b></span>
+          </div>
+
+          <!-- Growth Rate Indicators -->
+          <div class="grid grid-cols-3 gap-1 bg-[var(--bg)] p-2 rounded-lg my-2 text-center text-xs">
+            <div>
+              <span class="block text-[10px] text-[var(--mut)] font-semibold">${lang === 'hi' ? '1-वर्ष रिटर्न' : '1-Yr Return'}</span>
+              <span class="font-bold font-mono ${s.yr1 >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${s.yr1 >= 0 ? '+' : ''}${s.yr1.toFixed(1)}%</span>
+            </div>
+            <div>
+              <span class="block text-[10px] text-[var(--mut)] font-semibold">${lang === 'hi' ? '3-वर्ष CAGR' : '3-Yr CAGR'}</span>
+              <span class="font-bold font-mono text-[var(--pri)]">${s.cagr3.toFixed(1)}%</span>
+            </div>
+            <div>
+              <span class="block text-[10px] text-[var(--mut)] font-semibold">${lang === 'hi' ? 'EPS ग्रोथ' : 'EPS Growth'}</span>
+              <span class="font-bold font-mono text-amber-600 dark:text-amber-400">${s.eps.toFixed(1)}%</span>
+            </div>
+          </div>
+
+          <p class="text-xs text-[var(--mut)] mb-3">${lang === 'hi' ? s.descHi : s.descEn}</p>
+        </div>
+
+        <div class="border-t border-[var(--line)] pt-2.5 mt-1 flex justify-between items-center text-xs">
+          <div>
+            <span class="text-[var(--mut)]">${lang === 'hi' ? 'रोबो रेटिंग:' : 'Robo Rating:'}</span>
+            <span class="font-bold ${ratingColor} ml-1">${s.rating}</span>
+          </div>
+          <button onclick="syncStockToPortfolio('${s.ticker}', ${s.price})" class="px-2.5 py-1 bg-[var(--bg)] hover:bg-[var(--line)] text-[var(--ink)] font-semibold rounded border border-[var(--line)] text-xs cursor-pointer">
+            ${lang === 'hi' ? '+ पोर्टफोलियो' : '+ Add Portfolio'}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderStocksTable() {
+  const container = $('stocksTableBody');
+  if (!container) return;
+
+  const stocks = getFilteredAndSortedStocks();
+
+  if (stocks.length === 0) {
+    container.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-xs text-[var(--mut)]">${lang === 'hi' ? 'कोई शेयर उपलब्ध नहीं है।' : 'No stocks found.'}</td></tr>`;
+    return;
+  }
+
+  container.innerHTML = stocks.map(s => {
+    const isUp = s.pct >= 0;
+    const badgeColor = isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+    return `
+      <tr class="border-b border-[var(--line)] hover:bg-[var(--bg)] transition">
+        <td class="p-3">
+          <div class="font-bold font-mono text-[var(--pri)]">${s.ticker}</div>
+          <div class="text-[11px] text-[var(--mut)]">${s.name}</div>
+        </td>
+        <td class="p-3 text-right font-mono font-bold">₹${s.price.toFixed(2)}</td>
+        <td class="p-3 text-right font-mono font-bold ${badgeColor}">${isUp ? '+' : ''}${s.pct.toFixed(2)}%</td>
+        <td class="p-3 text-right font-mono font-bold ${s.yr1 >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${s.yr1 >= 0 ? '+' : ''}${s.yr1.toFixed(1)}%</td>
+        <td class="p-3 text-right font-mono font-bold text-[var(--pri)]">${s.cagr3.toFixed(1)}%</td>
+        <td class="p-3 text-right font-mono font-bold text-amber-600 dark:text-amber-400">${s.eps.toFixed(1)}%</td>
+        <td class="p-3 text-center">
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold ${s.rating.includes('Strong') ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'}">
+            ${s.rating}
+          </span>
+        </td>
+        <td class="p-3 text-center">
+          <button onclick="syncStockToPortfolio('${s.ticker}', ${s.price})" class="px-2 py-1 bg-[var(--bg)] hover:bg-[var(--line)] text-[var(--ink)] font-semibold rounded border border-[var(--line)] text-[11px] cursor-pointer">
+            + ${lang === 'hi' ? 'जोड़ें' : 'Add'}
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function syncStockToPortfolio(ticker, price) {
+  const currentEquity = +$("h0").value || 0;
+  $("h0").value = Math.round(currentEquity + price * 5);
+  ran.rb = 1;
+  renderRb();
+  alert(lang === 'hi' ? `${ticker} का मान पोर्टफोलियो इक्विटी होल्डिंग में जोड़ा गया!` : `Added 5 shares of ${ticker} to Equity Holdings!`);
+}
+
+/* ================= TRANSLATIONS ================= */
+const T = {
+  sub: [
+    "Smart Robo-advisor for financial management: Profile, Risk, Income Investment Suggestions, Live Market & Top Shares.",
+    "वित्तीय प्रबंधन के लिए रोबो-एडवाइज़र: प्रोफ़ाइल, जोखिम, आय निवेश सुझाव, लाइव बाज़ार और टॉप शेयर्स।"
+  ],
+  tab0: ["Plan", "योजना"],
+  tab1: ["Income Advisor", "आय सलाहकार"],
+  tab2: ["Top Shares", "टॉप शेयर्स"],
+  tab3: ["Live Market", "लाइव बाज़ार"],
+  tab4: ["Budget", "बजट"],
+  tab5: ["SIP Goal", "SIP लक्ष्य"],
+  tab6: ["Rebalance", "रीबैलेंस"],
+  tab7: ["Domains", "क्षेत्र"],
+  prof: ["Client profile", "ग्राहक प्रोफ़ाइल"],
+  age: ["Age", "आयु"],
+  inc: ["Monthly income (₹)", "मासिक आय (₹)"],
+  exp: ["Monthly expenses (₹)", "मासिक खर्च (₹)"],
+  hor: ["Investment horizon (years)", "निवेश अवधि (वर्ष)"],
+  goal: ["Goal", "लक्ष्य"],
+  g0: ["Wealth creation", "धन निर्माण"],
+  g1: ["Retirement", "सेवानिवृत्ति"],
+  g2: ["Education", "शिक्षा"],
+  g3: ["Emergency fund", "आपातकालीन निधि"],
+  quizT: ["Risk quiz", "जोखिम क्विज़"],
+  go: ["Get my allocation", "मेरा आवंटन देखें"],
+  planT: ["Your Investment Plan", "आपकी निवेश योजना"],
+  planI: ["Fill in your profile and press “Get my allocation”.", "प्रोफ़ाइल भरकर “मेरा आवंटन देखें” दबाएँ।"],
+  q0: ["If the market falls 15%?", "अगर बाज़ार 15% गिर जाए तो?"],
+  o00: ["I will sell everything", "सब बेच दूँगा"],
+  o01: ["I will wait", "इंतज़ार करूँगा"],
+  o02: ["I will buy more", "और खरीदूँगा"],
+  q1: ["Main purpose of investing?", "निवेश का मुख्य उद्देश्य?"],
+  o10: ["Keep money safe", "पैसा सुरक्षित रहे"],
+  o11: ["Balanced growth", "संतुलित वृद्धि"],
+  o12: ["Maximum growth", "अधिकतम वृद्धि"],
+  q2: ["How stable is your income?", "आपकी आय कितनी स्थिर है?"],
+  o20: ["Unstable", "अस्थिर"],
+  o21: ["Moderate", "मध्यम"],
+  o22: ["Very stable", "बहुत स्थिर"],
+  q3: ["Investing experience?", "निवेश का अनुभव?"],
+  o30: ["None", "कोई नहीं"],
+  o31: ["Some", "थोड़ा"],
+  o32: ["A lot", "काफ़ी"],
+  q4: ["Loss tolerance (in 1 year)?", "नुकसान सहने की क्षमता (1 साल में)?"],
+  o40: ["Up to 5%", "5% तक"],
+  o41: ["Up to 15%", "15% तक"],
+  o42: ["25% or more", "25% या ज़्यादा"],
+  Conservative: ["Conservative", "सतर्क (कम जोखिम)"],
+  Moderate: ["Moderate", "संतुलित (मध्यम जोखिम)"],
+  Aggressive: ["Aggressive", "आक्रामक (अधिक जोखिम)"],
+  score: ["Risk score {0} · Goal: {1}", "जोखिम स्कोर {0} · लक्ष्य: {1}"],
+  save: [
+    "Monthly saving: <b>{0}</b>. About <b>{1}</b> of this should go into equity SIP.",
+    "मासिक बचत: <b>{0}</b>। इसमें से लगभग <b>{1}</b> इक्विटी SIP में जाना चाहिए।"
+  ],
+  disc: [
+    "Educational prototype & Live Market Demo. Not official SEBI-registered investment advice.",
+    "यह शैक्षणिक प्रोटोटाइप और लाइव बाज़ार डेमो है, SEBI-पंजीकृत सलाह नहीं।"
+  ],
+  incAdvTitle: ["Smart Investment Advisor", "स्मार्ट आय निवेश सलाहकार"],
+  incAdvSub: ["Custom investment roadmap tailored to your monthly surplus income.", "आपकी मासिक बचत आय के अनुसार अनुकूलित निवेश योजना।"],
+  advEmergL: ["Emergency Reserve Priority", "आपातकालीन कोष प्राथमिकता"],
+  emergOpt0: ["Emergency Fund Fully Built (0% reserve)", "आपातकालीन फंड पहले से तैयार है (0%)"],
+  emergOpt1: ["Build Emergency Fund (15% of surplus)", "आपातकालीन फंड बनाएँ (बचत का 15%)"],
+  emergOpt2: ["High Emergency Reserve (25% of surplus)", "बड़ा आपातकालीन फंड (बचत का 25%)"],
+  advTaxL: ["Tax Saving Needs", "कर बचत की आवश्यकता"],
+  taxOptNo: ["Tax saving not required / Standard Tax Regime", "कर बचत की आवश्यकता नहीं / मानक कर प्रणाली"],
+  taxOptYes: ["Need Tax Saving (ELSS / NPS Section 80C)", "कर बचत चाहिए (ELSS / NPS धारा 80C)"],
+  btnGenAdvice: ["Generate Investment Suggestion", "निवेश सुझाव देखें"],
+  incResTitle: ["Where To Invest Your Income", "अपनी आय कहाँ और कैसे निवेश करें"],
+  incAdvPrompt: ["Enter income & expenses, then click button to view personalized suggestions.", "आय और खर्च दर्ज करके बटन पर क्लिक करें।"],
+  stocksTitle: ["Top Stocks Growth & Analysis", "टॉप शेयर्स ग्रोथ और लाइव विश्लेषण"],
+  stocksSub: ["Live price action, 1-Year Returns, 3-Year CAGR, and EPS Growth rates.", "लाइव भाव, 1-वर्षीय रिटर्न, 3-वर्षीय CAGR और EPS ग्रोथ रेट।"],
+  sortByL: ["Sort:", "क्रम:"],
+  sortScore: ["Robo Score", "रोबो स्कोर"],
+  sortCagr: ["3-Yr CAGR", "3-वर्षीय CAGR"],
+  sortYr1: ["1-Yr Growth", "1-वर्षीय ग्रोथ"],
+  sortEps: ["EPS Growth", "EPS ग्रोथ"],
+  sortToday: ["Today's % Change", "आज का % बदलाव"],
+  stockCategory: ["Cap:", "कैप:"],
+  capAll: ["All Categories", "सभी कैटेगरी"],
+  capLarge: ["Large Cap / Bluechip", "लार्ज कैप / ब्लूचिप"],
+  capMid: ["High Growth / Mid Cap", "हाई ग्रोथ / मिड कैप"],
+  capDiv: ["Dividend & Defensive", "डिविडेंड और सेफ शेयर्स"],
+  colStock: ["Stock Name", "शेयर का नाम"],
+  colPrice: ["Live Price", "लाइव भाव"],
+  colToday: ["Today %", "आज का %"],
+  col1Yr: ["1-Yr Growth", "1-वर्षीय ग्रोथ"],
+  col3Yr: ["3-Yr CAGR", "3-वर्षीय CAGR"],
+  colEps: ["EPS Growth", "EPS ग्रोथ"],
+  colRating: ["Rating", "रेटिंग"],
+  colAction: ["Action", "कार्रवाई"],
+  mktTitle: ["Live Market Overview", "लाइव बाज़ार का अवलोकन"],
+  mktSub: [
+    "Real-time benchmark quotes for Indian stock indices and gold rates.",
+    "भारतीय शेयर सूचकांकों और सोने की दरों के लिए वास्तविक समय के उद्धरण।"
+  ],
+  refBtn: ["Refresh Rates", "दरें ताज़ा करें"],
+  mktInsightT: ["Robo Market Analysis", "रोबो बाज़ार विश्लेषण"],
+  budT: ["Budget check", "बजट जाँच"],
+  budN: ["Uses income and expenses from the Plan tab.", "प्लान टैब की आय और खर्च का उपयोग होता है।"],
+  bb: ["Analyse budget", "बजट विश्लेषण करें"],
+  sv: ["Savings: <b>{0}</b> ({1}% of income)", "बचत: <b>{0}</b> (आय का {1}%)"],
+  good: ["Great! Savings are 20% or more.", "बढ़िया! बचत 20% या उससे ज़्यादा है।"],
+  low: ["Savings are below 20%. Cut expenses or raise income.", "बचत 20% से कम है। खर्च घटाएँ या आय बढ़ाएँ।"],
+  ruleT: ["50 / 30 / 20 rule", "50 / 30 / 20 नियम"],
+  bucket: ["Bucket", "श्रेणी"],
+  ideal: ["Ideal", "आदर्श"],
+  needs: ["Needs (50%)", "ज़रूरतें (50%)"],
+  wants: ["Wants (30%)", "चाहतें (30%)"],
+  sav: ["Savings (20%)", "बचत (20%)"],
+  yours: ["Your expenses", "आपके खर्च"],
+  over: ["(above limit)", "(सीमा से ऊपर)"],
+  within: ["(within limit)", "(सीमा के अंदर)"],
+  sipT: ["Goal planner (SIP)", "लक्ष्य योजना (SIP)"],
+  gt: ["Target amount (₹)", "लक्ष्य राशि (₹)"],
+  gy: ["Years to goal", "लक्ष्य तक वर्ष"],
+  gr: ["Expected return (% per year)", "अपेक्षित रिटर्न (% प्रति वर्ष)"],
+  useLiveRate: ["Use Live Market CAGR (12.5%)", "लाइव बाज़ार दर का उपयोग करें (12.5%)"],
+  gb: ["Calculate SIP", "SIP निकालें"],
+  resT: ["Result", "परिणाम"],
+  sipI: ["The result will appear here.", "परिणाम यहाँ दिखेगा।"],
+  perM: ["{0}/month", "{0}/माह"],
+  sipTxt: [
+    "To reach {0} in {1} years at {2}% expected return.",
+    "{1} वर्षों में {0} पाने के लिए, {2}% अपेक्षित रिटर्न पर।"
+  ],
+  tot: ["Total invested: {0} · Growth: {1}", "कुल निवेश: {0} · वृद्धि: {1}"],
+  holdT: ["Current holdings (₹)", "मौजूदा होल्डिंग (₹)"],
+  syncMkt: ["Sync Live Gold Value", "लाइव गोल्ड मान सिंक करें"],
+  n0: ["Equity", "इक्विटी"], n1: ["Debt", "डेट"], n2: ["Gold", "सोना"], n3: ["Liquid", "तरल"],
+  th: ["Alert threshold (% drift)", "अलर्ट सीमा (% विचलन)"],
+  rb: ["Check drift", "विचलन जाँचें"],
+  driftT: ["Drift report", "विचलन रिपोर्ट"],
+  driftI: ["First get your allocation in the Plan tab, then check here.", "पहले प्लान टैब में आवंटन निकालें, फिर यहाँ जाँचें।"],
+  needFirst: ["First press “Get my allocation” in the Plan tab.", "पहले प्लान टैब में “मेरा आवंटन देखें” दबाएँ।"],
+  asset: ["Asset", "संपत्ति"], now: ["Now", "अभी"], target: ["Target", "लक्ष्य"], drift: ["Drift", "विचलन"], action: ["Action", "कार्रवाई"],
+  sell: ["Sell", "बेचें"], buy: ["Buy", "खरीदें"], okk: ["OK", "ठीक"],
+  rebY: ["Rebalancing is needed. Follow the actions above.", "रीबैलेंस ज़रूरी है। ऊपर दी गई कार्रवाइयाँ करें।"],
+  rebN: ["Portfolio is close to target. Nothing to do now.", "पोर्टफ़ोलियो लक्ष्य के पास है। अभी कुछ करने की ज़रूरत नहीं।"],
+  domT: ["Other domains where robo-advisory works", "अन्य क्षेत्र जहाँ रोबो-एडवाइज़री काम करती है"],
+  dh0: ["Domain", "क्षेत्र"], dh1: ["What the robo does", "रोबो क्या करता है"], dh2: ["Input", "इनपुट"], dh3: ["Output", "आउटपुट"]
+};
+
+const DOM = [
+  [["Investment","निवेश"],["Suggests allocation and SIP","आवंटन और SIP सुझाता है"],["Age, risk, goal","आयु, जोखिम, लक्ष्य"],["Portfolio mix","पोर्टफ़ोलियो मिश्रण"]],
+  [["Insurance","बीमा"],["Recommends the right cover and policy type","सही कवर और पॉलिसी प्रकार बताता है"],["Age, dependents, income","आयु, आश्रित, आय"],["Term/health cover amount","टर्म/हेल्थ कवर राशि"]],
+  [["Tax planning","कर योजना"],["Suggests 80C, ELSS, NPS options","80C, ELSS, NPS विकल्प सुझाता है"],["Income, deductions","आय, कटौतियाँ"],["Tax-saving plan","कर बचत योजना"]],
+  [["Retirement","सेवानिवृत्ति"],["Calculates the retirement corpus","रिटायरमेंट कॉर्पस निकालता है"],["Age, expenses, inflation","आयु, खर्च, महँगाई"],["Monthly SIP target","मासिक SIP लक्ष्य"]],
+  [["Loan and credit","लोन और क्रेडिट"],["Plans EMI and improves credit score","EMI योजना और क्रेडिट स्कोर सुधार"],["Income, loans, score","आय, लोन, स्कोर"],["Loan eligibility, EMI plan","लोन पात्रता, EMI योजना"]],
+  [["Budgeting","बजटिंग"],["Tracks spending and raises savings","खर्च ट्रैक करता है और बचत बढ़ाता है"],["Income, expenses","आय, खर्च"],["Budget alerts","बजट अलर्ट"]],
+  [["Education","शिक्षा"],["Plans the fees goal","फ़ीस के लक्ष्य की योजना"],["Course cost, years","कोर्स लागत, वर्ष"],["Goal-based SIP","लक्ष्य आधारित SIP"]],
+  [["Wealth (HNI)","संपत्ति (HNI)"],["Manages multi-asset portfolios","मल्टी-एसेट पोर्टफ़ोलियो संभालता है"],["Net worth, goals","कुल संपत्ति, लक्ष्य"],["Customised strategy","अनुकूलित रणनीति"]]
+];
+
+let lang = "en";
+try { lang = localStorage.getItem("rr_lang") || "en"; } catch(e){}
+
+const li = () => lang === "hi" ? 1 : 0;
+const t = (k, ...a) => T[k] ? T[k][li()].replace(/\{(\d)\}/g, (m, i) => a[i]) : k;
+const inr = n => "₹" + Math.round(n).toLocaleString(lang === "hi" ? "hi-IN" : "en-IN");
+
+const ALLOC = { Conservative: [20, 50, 10, 20], Moderate: [45, 30, 10, 15], Aggressive: [70, 15, 10, 5] };
+const RET = { Conservative: 8, Moderate: 11, Aggressive: 14 };
+const COL = ["--c1", "--c2", "--c3", "--c4", "--c5"];
+let cat = "Moderate", tgt = ALLOC.Moderate, sc = 10;
+const ran = {};
+
+/* Build Tabs */
+const tabs = $("tabs");
+[0, 1, 2, 3, 4, 5, 6, 7].forEach(i => {
+  const b = document.createElement("button");
+  b.dataset.i = "tab" + i;
+  b.className = `px-4 py-2 text-sm font-semibold border-b-2 border-transparent transition cursor-pointer whitespace-nowrap text-[var(--mut)] hover:text-[var(--pri)]`;
+  b.setAttribute("role", "tab");
+  b.onclick = () => showTab(i);
+  tabs.appendChild(b);
+});
+
+function showTab(n) {
+  [...tabs.children].forEach((b, i) => {
+    const isSel = i === n;
+    b.classList.toggle("text-[var(--pri)]", isSel);
+    b.classList.toggle("border-[var(--acc)]", isSel);
+    b.classList.toggle("text-[var(--mut)]", !isSel);
+    b.classList.toggle("border-transparent", !isSel);
+  });
+  document.querySelectorAll(".tab-sec").forEach((sec, i) => {
+    sec.classList.toggle("hidden", i !== n);
+  });
+}
+
+// Build Quiz
+$("quiz").innerHTML = [0, 1, 2, 3, 4].map(i => 
+  `<div>
+    <label for="q${i}" class="text-xs font-semibold text-[var(--mut)] block mb-1" data-i="q${i}"></label>
+    <select id="q${i}" class="w-full p-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-sm">
+      ${[0, 1, 2].map(j => `<option value="${j+1}" data-i="o${i}${j}"></option>`).join("")}
+    </select>
+  </div>`
+).join("");
+
+function donut(a) {
+  let s = 0;
+  const p = a.map((v, i) => {
+    const r = `var(${COL[i]}) ${s}% ${s + v}%`;
+    s += v;
+    return r;
+  });
+  return `<div class="donut shadow-inner" role="img" style="background:conic-gradient(${p.join(",")})"></div>`;
+}
+
+function legend(a) {
+  return `<div class="mt-4 space-y-2 text-sm">
+    ${a.map((v, i) => `
+      <div class="flex justify-between items-center py-1 border-b border-[var(--line)]">
+        <span class="flex items-center"><span class="dot" style="background:var(${COL[i]})"></span>${t("n" + i)}</span>
+        <b class="font-mono">${v}%</b>
+      </div>
+    `).join("")}
+  </div>`;
+}
+
+/* ================= SMART INCOME INVESTMENT ADVISOR ENGINE ================= */
+function calculateIncomeAdvice() {
+  const inc = +$("advInc").value || 0;
+  const exp = +$("advExp").value || 0;
+  const surplus = Math.max(0, inc - exp);
+  const emergPct = +$("advEmerg").value;
+  const needTax = $("advTax").value === "yes";
+
+  const resDiv = $("incAdvResults");
+
+  if (surplus <= 0) {
+    resDiv.innerHTML = `
+      <div class="p-4 rounded-xl bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-medium text-sm">
+        ${lang === 'hi' 
+          ? 'आपका मासिक खर्च आपकी आय के बराबर या अधिक है। निवेश करने से पहले खर्चों को नियंत्रित करें।' 
+          : 'Your monthly expenses exceed or equal your income. Reduce expenses to create investable surplus.'}
+      </div>
+    `;
+    return;
+  }
+
+  let emergVal = (surplus * emergPct) / 100;
+  let remainingSurplus = surplus - emergVal;
+
+  let taxVal = 0;
+  if (needTax && remainingSurplus > 0) {
+    taxVal = Math.min(remainingSurplus * 0.25, 12500);
+    remainingSurplus -= taxVal;
+  }
+
+  const eqRatio = (tgt ? tgt[0] : 45) / 100;
+  const debtRatio = (tgt ? tgt[1] : 30) / 100;
+  const goldRatio = (tgt ? tgt[2] : 10) / 100;
+  const liquidRatio = (tgt ? tgt[3] : 15) / 100;
+
+  const eqVal = remainingSurplus * eqRatio;
+  const debtVal = remainingSurplus * debtRatio;
+  const goldVal = remainingSurplus * goldRatio;
+  const liquidVal = remainingSurplus * liquidRatio;
+
+  const items = [
+    { title: lang === 'hi' ? 'इक्विटी म्यूचुअल फंड (Nifty/FlexiCap)' : 'Equity Mutual Funds (Index/FlexiCap)', val: eqVal, pct: (eqVal/surplus)*100, bg: 'var(--c1)', desc: lang === 'hi' ? 'लंबी अवधि में संपदा वृद्धि के लिए SIP' : 'SIP for long term wealth creation' },
+    { title: lang === 'hi' ? 'सुरक्षित डेट (PPF / NPS / FD)' : 'Debt & Fixed Income (PPF / NPS / FD)', val: debtVal, pct: (debtVal/surplus)*100, bg: 'var(--c2)', desc: lang === 'hi' ? 'स्थिर ब्याज व कम जोखिम वाला हिस्सा' : 'Stable yield with lower volatility' },
+    { title: lang === 'hi' ? 'गोल्ड (SGB / Gold ETF)' : 'Gold Investment (SGB / Gold ETF)', val: goldVal, pct: (goldVal/surplus)*100, bg: 'var(--c3)', desc: lang === 'hi' ? 'मुद्रास्फीति और बाजार गिरावट से सुरक्षा' : 'Hedge against inflation and market falls' },
+    { title: lang === 'hi' ? 'इमरजेंसी / लिक्विड (Liquid Mutual Fund)' : 'Emergency & Savings Liquid Reserve', val: emergVal + liquidVal, pct: ((emergVal + liquidVal)/surplus)*100, bg: 'var(--c4)', desc: lang === 'hi' ? '3-6 महीने का आपातकालीन खर्च फंड' : 'For short term needs and emergency cushion' }
+  ];
+
+  if (taxVal > 0) {
+    items.unshift({
+      title: lang === 'hi' ? 'कर बचत (ELSS 80C / NPS)' : 'Tax Saving ELSS / NPS (Sec 80C)',
+      val: taxVal,
+      pct: (taxVal/surplus)*100,
+      bg: 'var(--c5)',
+      desc: lang === 'hi' ? 'टैक्स बचाने के साथ 3 साल की अवधि में ग्रोथ' : 'Saves tax under 80C with 3-yr lock-in'
+    });
+  }
+
+  resDiv.innerHTML = `
+    <div class="space-y-4">
+      <div class="p-4 rounded-xl bg-[var(--bg)] border border-[var(--line)]">
+        <div class="flex justify-between items-center">
+          <div>
+            <span class="text-xs text-[var(--mut)] uppercase tracking-wider font-semibold">${lang === 'hi' ? 'कुल मासिक निवेश योग्य बचत' : 'Total Monthly Surplus'}</span>
+            <div class="text-3xl font-bold font-serif text-[var(--pri)]">${inr(surplus)}</div>
+          </div>
+          <span class="px-3 py-1 text-xs rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold">
+            ${((surplus / inc) * 100).toFixed(0)}% ${lang === 'hi' ? 'आय की बचत' : 'of Income Saved'}
+          </span>
+        </div>
+      </div>
+
+      <h4 class="font-bold text-sm text-[var(--ink)] mt-3">${lang === 'hi' ? 'मासिक आय का चरणबद्ध आवंटन:' : 'Recommended Allocation Breakdown:'}</h4>
+      
+      <div class="space-y-3">
+        ${items.map(item => `
+          <div class="p-3 rounded-lg border border-[var(--line)] bg-[var(--card)]">
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-bold text-sm flex items-center">
+                <span class="w-3 h-3 rounded-sm inline-block mr-2" style="background:${item.bg}"></span>
+                ${item.title}
+              </span>
+              <span class="font-mono font-bold text-sm text-[var(--pri)]">${inr(item.val)} <span class="text-xs font-normal text-[var(--mut)]">(${item.pct.toFixed(0)}%)</span></span>
+            </div>
+            <div class="w-full bg-[var(--line)] h-2 rounded-full overflow-hidden my-1.5">
+              <div class="h-full transition-all" style="width:${item.pct}%; background:${item.bg}"></div>
+            </div>
+            <p class="text-xs text-[var(--mut)]">${item.desc}</p>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="p-3.5 rounded-lg bg-[var(--bg)] border-l-4 border-[var(--acc)] text-xs text-[var(--ink)] space-y-1">
+        <b class="block font-bold">${lang === 'hi' ? 'रोबो सुझाव निष्पादन निर्देश:' : 'Robo Execution Strategy:'}</b>
+        <p>${lang === 'hi' 
+          ? `हर महीने की 1 से 5 तारीख के बीच <b>${inr(eqVal + taxVal)}</b> की SIP सीधे निफ्टी 50 / फ्लेक्सीकैप में ऑटो-डेबिट सेट करें।`
+          : `Set up an automated monthly SIP auto-debit of <b>${inr(eqVal + taxVal)}</b> on the 1st-5th of every month into Nifty 50 Index / FlexiCap funds.`}
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+/* ===== RENDER FUNCTIONS ===== */
+function renderPlan() {
+  const inc = +$("inc").value;
+  const exp = +$("exp").value;
+  const sv = Math.max(inc - exp, 0);
+  
+  $("advInc").value = inc;
+  $("advExp").value = exp;
+
+  $("res").innerHTML = `
+    <div>
+      <h2 class="text-xl font-bold font-serif text-[var(--pri)]">${t("planT")}</h2>
+      <div class="text-3xl font-bold font-serif text-[var(--pri)] mt-2">${t(cat)}</div>
+      <small class="text-xs text-[var(--mut)] block mt-1">${t("score", sc, $("goal").selectedOptions[0].textContent)}</small>
+      ${donut(tgt)}
+      ${legend(tgt)}
+      <div class="mt-4 p-3 rounded-lg bg-[var(--bg)] text-sm">
+        ${t("save", inr(sv), inr(sv * tgt[0] / 100))}
+      </div>
+    </div>
+    <small class="text-xs text-[var(--mut)] block mt-4 border-t border-[var(--line)] pt-2">${t("disc")}</small>
+  `;
+}
+
+function renderBud() {
+  const inc = +$("inc").value;
+  const ex = +$("exp").value;
+  const s = inc - ex;
+  const r = inc > 0 ? (s / inc * 100) : 0;
+  const N = inc * 0.5, W = inc * 0.3, S = inc * 0.2;
+  const isGood = r >= 20;
+
+  $("bud").innerHTML = `
+    <p class="text-sm">${t("sv", inr(s), r.toFixed(0))}</p>
+    <div class="w-full bg-[var(--line)] h-3 rounded-full overflow-hidden mt-2">
+      <div class="bg-[var(--pri)] h-full transition-all" style="width:${Math.max(0, Math.min(r, 100))}%"></div>
+    </div>
+    <div class="p-3 rounded-lg mt-3 font-semibold text-sm ${isGood ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'}">
+      ${t(isGood ? "good" : "low")}
+    </div>
+  `;
+
+  $("rule").innerHTML = `
+    <table class="w-full text-sm border-collapse">
+      <tr class="border-b border-[var(--line)] text-[var(--mut)]"><th class="text-left py-2">${t("bucket")}</th><th class="text-right py-2">${t("ideal")}</th></tr>
+      <tr class="border-b border-[var(--line)]"><td class="py-2">${t("needs")}</td><td class="text-right font-mono">${inr(N)}</td></tr>
+      <tr class="border-b border-[var(--line)]"><td class="py-2">${t("wants")}</td><td class="text-right font-mono">${inr(W)}</td></tr>
+      <tr class="border-b border-[var(--line)]"><td class="py-2">${t("sav")}</td><td class="text-right font-mono">${inr(S)}</td></tr>
+      <tr class="border-b border-[var(--line)] font-bold"><td class="py-2">${t("yours")}</td><td class="text-right font-mono">${inr(ex)} <small class="font-normal text-xs text-[var(--mut)]">${t(ex > N + W ? "over" : "within")}</small></td></tr>
+    </table>
+  `;
+}
+
+function renderSip() {
+  const T0 = +$("gt").value;
+  const y = +$("gy").value;
+  const rr = +$("gr").value;
+  const r = rr / 1200;
+  const n = y * 12;
+  const sip = r ? T0 * r / ((Math.pow(1 + r, n) - 1) * (1 + r)) : T0 / n;
+
+  $("gres").innerHTML = `
+    <div class="text-3xl font-bold font-serif text-[var(--pri)]">${t("perM", inr(sip))}</div>
+    <p class="text-sm text-[var(--mut)] mt-2">${t("sipTxt", inr(T0), y, rr.toFixed(1))}</p>
+    <div class="mt-4 p-3 rounded-lg bg-[var(--bg)] text-xs text-[var(--mut)]">
+      ${t("tot", inr(sip * n), inr(T0 - (sip * n)))}
+    </div>
+  `;
+}
+
+function renderRb() {
+  if (!tgt) {
+    $("rres").innerHTML = `<div class="p-3 rounded-lg bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-semibold text-sm">${t("needFirst")}</div>`;
+    return;
+  }
+  const h = [0, 1, 2, 3].map(i => +$("h" + i).value);
+  const tot = h.reduce((a, b) => a + b, 0);
+  const th = +$("th").value;
+  let al = false;
+
+  const rows = h.map((v, i) => {
+    const c = tot > 0 ? (v / tot * 100) : 0;
+    const d = c - tgt[i];
+    const big = Math.abs(d) > th;
+    if (big) al = true;
+    return `
+      <tr class="border-b border-[var(--line)]">
+        <td class="py-2 font-medium">${t("n" + i)}</td>
+        <td class="py-2 text-right font-mono">${c.toFixed(1)}%</td>
+        <td class="py-2 text-right font-mono">${tgt[i]}%</td>
+        <td class="py-2 text-right font-mono ${d > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}">${d > 0 ? '+' : ''}${d.toFixed(1)}%</td>
+        <td class="py-2 text-right font-bold text-xs">${big ? t(d > 0 ? "sell" : "buy") + " " + inr(Math.abs(d) / 100 * tot) : t("okk")}</td>
+      </tr>
+    `;
+  }).join("");
+
+  $("rres").innerHTML = `
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs">
+        <tr class="border-b border-[var(--line)] text-[var(--mut)] text-left"><th class="py-2">${t("asset")}</th><th class="text-right">${t("now")}</th><th class="text-right">${t("target")}</th><th class="text-right">${t("drift")}</th><th class="text-right">${t("action")}</th></tr>
+        ${rows}
+      </table>
+    </div>
+    <div class="p-3 rounded-lg mt-4 font-semibold text-sm ${al ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'}">
+      ${t(al ? "rebY" : "rebN")}
+    </div>
+  `;
+}
+
+function renderDom() {
+  $("dom").innerHTML = 
+    `<tr class="border-b border-[var(--line)] text-[var(--mut)]">` +
+      [0, 1, 2, 3].map(i => `<th class="py-2 px-2">${t("dh" + i)}</th>`).join("") +
+    `</tr>` +
+    DOM.map(r => 
+      `<tr class="border-b border-[var(--line)]">` +
+        r.map((c, i) => i ? `<td class="py-2.5 px-2">${c[li()]}</td>` : `<th scope="row" class="py-2.5 px-2 font-bold text-[var(--pri)]">${c[li()]}</th>`).join("") +
+      `</tr>`
+    ).join("");
+}
+
+/* ===== LANGUAGE SWITCH & EVENT HANDLERS ===== */
+function applyLang() {
+  document.querySelectorAll("[data-i]").forEach(e => {
+    e.textContent = t(e.dataset.i);
+  });
+  document.documentElement.lang = lang;
+  document.querySelectorAll("#lang button").forEach(b => {
+    const active = b.dataset.l === lang;
+    b.classList.toggle("bg-[var(--pri)]", active);
+    b.classList.toggle("text-white", active);
+    b.classList.toggle("dark:text-gray-900", active);
+  });
+  renderDom();
+  renderTicker();
+  renderMarketCards();
+  renderMarketInsights();
+  renderSectorFilters();
+  renderStocksGrid();
+  renderStocksTable();
+  calculateIncomeAdvice();
+  if (cat) renderPlan();
+  if (ran.bud) renderBud();
+  if (ran.sip) renderSip();
+  if (ran.rb) renderRb();
+}
+
+document.querySelectorAll("#lang button").forEach(b => {
+  b.onclick = () => {
+    lang = b.dataset.l;
+    try { localStorage.setItem("rr_lang", lang); } catch(e){}
+    applyLang();
+  };
+});
+
+$("stockCapFilter").onchange = () => { renderStocksGrid(); renderStocksTable(); };
+$("stockSortBy").onchange = () => { renderStocksGrid(); renderStocksTable(); };
+
+/* ===== BUTTON LOGIC ===== */
+$("go").onclick = () => {
+  sc = 0;
+  for (let i = 0; i < 5; i++) sc += +$("q" + i).value;
+  const age = +$("age").value;
+  const h = +$("hor").value;
+  sc += age < 30 ? 2 : age <= 45 ? 1 : age > 55 ? -1 : 0;
+  sc += h >= 10 ? 1 : h < 3 ? -2 : 0;
+  cat = sc <= 8 ? "Conservative" : sc <= 12 ? "Moderate" : "Aggressive";
+  tgt = ALLOC[cat];
+  $("gr").value = RET[cat];
+  renderPlan();
+  calculateIncomeAdvice();
+};
+
+$("btnCalcAdv").onclick = () => calculateIncomeAdvice();
+$("bb").onclick = () => { ran.bud = 1; renderBud(); };
+$("gb").onclick = () => { ran.sip = 1; renderSip(); };
+$("rb").onclick = () => { ran.rb = 1; renderRb(); };
+
+$("btnForceRefresh").onclick = () => {
+  const icon = $("spinIcon");
+  icon.classList.remove("hidden");
+  setTimeout(() => {
+    updateLivePrices();
+    icon.classList.add("hidden");
+  }, 400);
+};
+
+$("btnUseLiveRate").onclick = () => {
+  const nifty = marketData.find(d => d.id === 'NIFTY');
+  const liveCAGR = 12.0 + (nifty ? nifty.pct : 0.5);
+  $("gr").value = liveCAGR.toFixed(1);
+  ran.sip = 1;
+  renderSip();
+};
+
+$("btnSyncLiveHoldings").onclick = () => {
+  const gold = marketData.find(d => d.id === 'GOLD');
+  if (gold) {
+    const goldHoldVal = Math.round((gold.price / 78000) * 12000);
+    $("h2").value = goldHoldVal;
+  }
+  ran.rb = 1;
+  renderRb();
+};
+
+/* ===== INITIALIZATION ===== */
+showTab(0);
+applyLang();
+renderTicker();
+renderMarketCards();
+renderMarketInsights();
+renderSectorFilters();
+renderStocksGrid();
+renderStocksTable();
+
+setInterval(updateLivePrices, 3000);
+</script>
+</body>
+</html>
